@@ -344,13 +344,13 @@ IBHierarchyIntegrator::initializeHierarchyIntegrator(Pointer<PatchHierarchy<NDIM
     {
         d_u_phys_bdry_op = new CartCellRobinPhysBdryOp(u_scratch_idx,
                                                        d_ins_hier_integrator->getVelocityBoundaryConditions(),
-                                                       /*homogeneous_bc*/ true);  // XXXX: formerly set to false
+                                                       /*homogeneous_bc*/ true); // XXXX: formerly set to false
     }
     else if (u_sc_var)
     {
         d_u_phys_bdry_op = new CartSideRobinPhysBdryOp(u_scratch_idx,
                                                        d_ins_hier_integrator->getVelocityBoundaryConditions(),
-                                                       /*homogeneous_bc*/ true);  // XXXX: formerly set to false
+                                                       /*homogeneous_bc*/ true); // XXXX: formerly set to false
     }
     else
     {
