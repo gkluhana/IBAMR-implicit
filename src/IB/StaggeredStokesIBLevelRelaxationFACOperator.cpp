@@ -746,7 +746,68 @@ StaggeredStokesIBLevelRelaxationFACOperator::initializeOperatorStateSpecialized(
             d_patch_cell_bc_box_overlap[ln][patch_counter].removeIntersections(patch_box);
         }
     }
+    // Print Matrices
+    pout << "\n Printing Matrices...\n";
+    const int debug_ln = d_finest_ln;
+    // const int debug_ln =0;
+    
+    const KSP& level_ksp = debug_ln == 0 ? d_level_solvers[d_coarsest_ln]->getPETScKSP() : d_level_solvers[debug_ln]->getPETScKSP();
+    KSPSetUp(level_ksp);
+    PC pc;
+    KSPGetPC(level_ksp, &pc);
 
+    KSP* subksp;
+    PetscInt nlocal, first;
+    
+    PetscViewer matlab_viewer;
+    if (debug_ln==0)
+    {
+        Mat coarse_mat;
+        KSPGetOperators(level_ksp, &coarse_mat, PETSC_NULL);
+        std::ostringstream filename;
+        filename << "level_" << debug_ln;
+        PetscViewerBinaryOpen(PETSC_COMM_WORLD, filename.str().c_str(), FILE_MODE_WRITE, &matlab_viewer);
+        PetscViewerPushFormat(matlab_viewer, PETSC_VIEWER_BINARY_MATLAB);
+        MatView(coarse_mat, matlab_viewer);
+        pout << "\n Printed Coarse Matrix!"<<"\n" ;
+    }
+    else 
+    {
+    // PCASMGetSubKSP(pc, &nlocal, &first, &subksp);
+        Mat fine_mat;
+        KSPGetOperators(level_ksp, &fine_mat, PETSC_NULL);
+        std::ostringstream filename;
+        filename << "level_" << debug_ln;
+        PetscViewerBinaryOpen(PETSC_COMM_WORLD, filename.str().c_str(), FILE_MODE_WRITE, &matlab_viewer);
+        PetscViewerPushFormat(matlab_viewer, PETSC_VIEWER_BINARY_MATLAB);
+        MatView(fine_mat, matlab_viewer);
+        pout << "\n Printed Fine Matrix!"<<"\n" ;
+    }
+    for (int i = 0; i < nlocal; i++)
+    {
+        // Mat sub_mat;
+        // KSPGetOperators(subksp[i], &sub_mat, PETSC_NULL);
+
+        // std::ostringstream filename;
+        // filename << "level_" << debug_ln << "_" << i;
+        // PetscViewerBinaryOpen(PETSC_COMM_WORLD, filename.str().c_str(), FILE_MODE_WRITE, &matlab_viewer);
+        // PetscViewerPushFormat(matlab_viewer, PETSC_VIEWER_BINARY_MATLAB);
+        // MatView(sub_mat, matlab_viewer);
+        // pout << "\n Printed Matrix!"<< i <<"\n" ;
+
+
+    }
+    // Print SAJ
+
+    std::ostringstream SAJ_filename;
+    // Mat d_SAJ_mat = stokes_fac_op->getEulerianElasticityLevelOp(debug_ln);
+    SAJ_filename << "SAJ_" << debug_ln;
+    PetscViewerBinaryOpen(PETSC_COMM_WORLD, SAJ_filename.str().c_str(), FILE_MODE_WRITE, &matlab_viewer);
+    PetscViewerPushFormat(matlab_viewer, PETSC_VIEWER_BINARY_MATLAB);
+    MatView(d_SAJ_mat[debug_ln], matlab_viewer);
+    pout << "\n Printed SAJ Matrix!\n";
+    PetscViewerPopFormat(matlab_viewer);
+    PetscViewerDestroy(&matlab_viewer);
     return;
 } // initializeOperatorStateSpecialized
 
