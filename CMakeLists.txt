@@ -54,6 +54,7 @@ SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 # determine some details about the current Fortran compiler:
 INCLUDE(FortranCInterface)
+FortranCInterface_VERIFY(CXX QUIET)
 IF("${FortranCInterface_GLOBAL_CASE}" STREQUAL "LOWER")
   SET(_name "name")
 ELSE()
@@ -186,7 +187,7 @@ IF(NOT "${CMAKE_CXX_COMPILER}" STREQUAL "")
     SET(MPI_ROOT "${_compiler_directory}/../")
     MESSAGE(STATUS "Using MPI compiler wrapper to set MPI_ROOT=${MPI_ROOT}")
   ELSE()
-    MESSAGE(STATUS "CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} is not an MPI compiler wrapper")
+    MESSAGE(STATUS "CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} is not an MPI compiler wrapper - CMake will use the normal MPI detection sequence")
   ENDIF()
 ELSEIF((NOT $ENV{MPI_HOME} STREQUAL "") AND ("${MPI_ROOT}" STREQUAL ""))
   # if MPI_HOME is set then we should use that instead (environment modules
@@ -567,20 +568,21 @@ libMesh, it may have) to NOT use 64 bit indices.")
   # extract the version numbers:
   FIND_FILE(PETSC_VERSION_FILE petscversion.h HINTS ${PETSC_INCLUDE_DIRS})
   FILE(STRINGS "${PETSC_VERSION_FILE}" PETSC_VERSION_MAJOR_STRING
-    REGEX "#define.*PETSC_VERSION_MAJOR")
-  STRING(REGEX REPLACE "^.*PETSC_VERSION_MAJOR.* ([0-9]+).*" "\\1"
+    REGEX "^#[ \t]*define[ \t]+PETSC_VERSION_MAJOR[ \t]+[0-9]+[ \t]*$")
+  STRING(REGEX REPLACE "^#[ \t]*define[ \t]+PETSC_VERSION_MAJOR[ \t]+([0-9]+)[ \t]*$" "\\1"
     PETSC_VERSION_MAJOR "${PETSC_VERSION_MAJOR_STRING}"
     )
   FILE(STRINGS "${PETSC_VERSION_FILE}" PETSC_VERSION_MINOR_STRING
-    REGEX "#define.*PETSC_VERSION_MINOR")
-  STRING(REGEX REPLACE "^.*PETSC_VERSION_MINOR.* ([0-9]+).*" "\\1"
+    REGEX "^#[ \t]*define[ \t]+PETSC_VERSION_MINOR[ \t]+[0-9]+[ \t]*$")
+  STRING(REGEX REPLACE "^#[ \t]*define[ \t]+PETSC_VERSION_MINOR[ \t]+([0-9]+)[ \t]*$" "\\1"
     PETSC_VERSION_MINOR "${PETSC_VERSION_MINOR_STRING}"
     )
   FILE(STRINGS "${PETSC_VERSION_FILE}" PETSC_VERSION_SUBMINOR_STRING
-    REGEX "#define.*PETSC_VERSION_SUBMINOR")
-  STRING(REGEX REPLACE "^.*PETSC_VERSION_SUBMINOR.* ([0-9]+).*" "\\1"
+    REGEX "^#[ \t]*define[ \t]+PETSC_VERSION_SUBMINOR[ \t]+[0-9]+[ \t]*$")
+  STRING(REGEX REPLACE "^#[ \t]*define[ \t]+PETSC_VERSION_SUBMINOR[ \t]+([0-9]+)[ \t]*$" "\\1"
     PETSC_VERSION_SUBMINOR "${PETSC_VERSION_SUBMINOR_STRING}"
     )
+
   SET(PETSC_VERSION
     "${PETSC_VERSION_MAJOR}.${PETSC_VERSION_MINOR}.${PETSC_VERSION_SUBMINOR}")
   IF(${PETSC_VERSION} VERSION_LESS 3.7.0)

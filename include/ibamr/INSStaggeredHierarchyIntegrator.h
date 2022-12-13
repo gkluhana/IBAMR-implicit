@@ -400,7 +400,6 @@ private:
      * Fluid solver variables.
      */
     SAMRAI::tbox::Pointer<SAMRAI::pdat::SideVariable<NDIM, double> > d_U_var;
-    SAMRAI::tbox::Pointer<SAMRAI::pdat::CellVariable<NDIM, double> > d_U_cc_var;
     SAMRAI::tbox::Pointer<SAMRAI::pdat::CellVariable<NDIM, double> > d_P_var;
     SAMRAI::tbox::Pointer<SAMRAI::pdat::SideVariable<NDIM, double> > d_F_var;
     SAMRAI::tbox::Pointer<SAMRAI::pdat::CellVariable<NDIM, double> > d_F_cc_var;
@@ -408,6 +407,7 @@ private:
     SAMRAI::tbox::Pointer<SAMRAI::pdat::SideVariable<NDIM, double> > d_N_old_var;
 
     SAMRAI::tbox::Pointer<SAMRAI::pdat::CellVariable<NDIM, double> > d_Omega_var;
+    SAMRAI::tbox::Pointer<SAMRAI::pdat::NodeVariable<NDIM, double> > d_Omega_nc_var;
     SAMRAI::tbox::Pointer<SAMRAI::pdat::CellVariable<NDIM, double> > d_Div_U_var;
 
     SAMRAI::tbox::Pointer<SAMRAI::pdat::CellVariable<NDIM, double> > d_Omega_Norm_var;
@@ -422,6 +422,12 @@ private:
     std::string d_N_refine_type = "CONSERVATIVE_LINEAR_REFINE";
 
     std::string d_U_P_bdry_interp_type = "LINEAR";
+
+    /*!
+     * Variables for graphical output.
+     */
+    SAMRAI::tbox::Pointer<SAMRAI::pdat::NodeVariable<NDIM, double> > d_U_nc_var;
+    SAMRAI::tbox::Pointer<SAMRAI::pdat::NodeVariable<NDIM, double> > d_P_nc_var;
 
     /*
      * Patch data descriptor indices for all "state" variables managed by the
@@ -442,8 +448,8 @@ private:
      *
      * Plot variables have one context: current.
      */
-    int d_U_cc_idx = IBTK::invalid_index, d_F_cc_idx = IBTK::invalid_index, d_Omega_idx = IBTK::invalid_index,
-        d_Div_U_idx = IBTK::invalid_index, d_EE_idx = IBTK::invalid_index;
+    int d_U_nc_idx = IBTK::invalid_index, d_P_nc_idx = IBTK::invalid_index, d_F_cc_idx = IBTK::invalid_index, d_Omega_idx = IBTK::invalid_index,
+        d_Omega_nc_idx = IBTK::invalid_index, d_Div_U_idx = IBTK::invalid_index, d_EE_idx = IBTK::invalid_index;
 
     /*
      * Patch data descriptor indices for all "scratch" variables managed by the
@@ -453,34 +459,6 @@ private:
      */
     int d_Omega_Norm_idx = IBTK::invalid_index, d_U_regrid_idx = IBTK::invalid_index, d_U_src_idx = IBTK::invalid_index,
         d_indicator_idx = IBTK::invalid_index, d_F_div_idx = IBTK::invalid_index;
-
-    /*
-     * Data for tracking mean flow quantities and computing turbulent kinetic energy and Reynolds stresses.
-     */
-    unsigned int d_flow_averaging_interval = 0;
-    SAMRAI::tbox::Pointer<SAMRAI::pdat::CellVariable<NDIM, double> > d_U_mean_var;
-    std::string d_U_mean_coarsen_type = "CONSERVATIVE_COARSEN";
-    std::string d_U_mean_refine_type = "BOUNDS_PRESERVING_CONSERVATIVE_LINEAR_REFINE";
-
-    SAMRAI::tbox::Pointer<SAMRAI::pdat::CellVariable<NDIM, double> > d_UU_mean_var;
-    std::string d_UU_mean_coarsen_type = "CONSERVATIVE_COARSEN";
-    std::string d_UU_mean_refine_type = "BOUNDS_PRESERVING_CONSERVATIVE_LINEAR_REFINE";
-
-    SAMRAI::tbox::Pointer<SAMRAI::pdat::CellVariable<NDIM, double> > d_UU_fluct_var;
-    std::string d_UU_fluct_coarsen_type = "CONSERVATIVE_COARSEN";
-    std::string d_UU_fluct_refine_type = "BOUNDS_PRESERVING_CONSERVATIVE_LINEAR_REFINE";
-
-    SAMRAI::tbox::Pointer<SAMRAI::pdat::CellVariable<NDIM, double> > d_k_var;
-    std::string d_k_coarsen_type = "CONSERVATIVE_COARSEN";
-    std::string d_k_refine_type = "BOUNDS_PRESERVING_CONSERVATIVE_LINEAR_REFINE";
-
-    int d_U_mean_current_idx = IBTK::invalid_index, d_U_mean_new_idx = IBTK::invalid_index,
-        d_U_mean_scratch_idx = IBTK::invalid_index;
-    int d_UU_mean_current_idx = IBTK::invalid_index, d_UU_mean_new_idx = IBTK::invalid_index,
-        d_UU_mean_scratch_idx = IBTK::invalid_index;
-    int d_UU_fluct_current_idx = IBTK::invalid_index, d_UU_fluct_new_idx = IBTK::invalid_index,
-        d_UU_fluct_scratch_idx = IBTK::invalid_index;
-    int d_k_current_idx = IBTK::invalid_index, d_k_new_idx = IBTK::invalid_index, d_k_scratch_idx = IBTK::invalid_index;
 };
 } // namespace IBAMR
 

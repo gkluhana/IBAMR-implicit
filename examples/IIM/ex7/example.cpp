@@ -109,11 +109,11 @@ solid_surface_force_function(VectorValue<double>& F,
     std::vector<double> x_surface(NDIM, 0.0);
     for (unsigned int d = 0; d < NDIM; ++d)
     {
-        const MeshBase::const_element_iterator el_begin = mesh_bndry.active_local_elements_begin();
-        const MeshBase::const_element_iterator el_end = mesh_bndry.active_local_elements_end();
-        for (MeshBase::const_element_iterator el_it = el_begin; el_it != el_end; ++el_it)
+        const auto el_begin = mesh_bndry.active_local_elements_begin();
+        const auto el_end = mesh_bndry.active_local_elements_end();
+        for (auto el_it = el_begin; el_it != el_end; ++el_it)
         {
-            Elem* const elem_bndry = *el_it;
+            const Elem* elem_bndry = *el_it;
             if (elem_bndry->contains_point(X))
                 F(d) = Tau_new_surface_system->point_value(d, X, elem_bndry); //&side_elem);
         }
@@ -147,7 +147,7 @@ calculateGeomQuantitiesOfStructure(double& vol,                // mass of the bo
 
     const unsigned int dim = mesh.mesh_dimension();
 
-    UniquePtr<QBase> qrule = QBase::build(QGAUSS, dim, SEVENTH);
+    std::unique_ptr<QBase> qrule = QBase::build(QGAUSS, dim, SEVENTH);
 
     DofMap& X_dof_map = X_system.get_dof_map();
     std::vector<std::vector<unsigned int> > X_dof_indices(NDIM);
@@ -175,9 +175,9 @@ calculateGeomQuantitiesOfStructure(double& vol,                // mass of the bo
 
     // double X_qp_new[NDIM], X_qp_current[NDIM], R_qp_current[NDIM], R_qp_new[NDIM];
     VectorValue<double> X_qp, R_qp;
-    const MeshBase::const_element_iterator el_begin = mesh.active_local_elements_begin();
-    const MeshBase::const_element_iterator el_end = mesh.active_local_elements_end();
-    for (MeshBase::const_element_iterator el_it = el_begin; el_it != el_end; ++el_it)
+    const auto el_begin = mesh.active_local_elements_begin();
+    const auto el_end = mesh.active_local_elements_end();
+    for (auto el_it = el_begin; el_it != el_end; ++el_it)
     {
         const Elem* const elem = *el_it;
         fe->reinit(elem);
@@ -442,7 +442,7 @@ main(int argc, char* argv[])
         mesh.prepare_for_use();
 
         BoundaryMesh boundary_mesh(mesh.comm(), mesh.mesh_dimension() - 1);
-        mesh.boundary_info->sync(boundary_mesh);
+        mesh.get_boundary_info().sync(boundary_mesh);
         boundary_mesh.prepare_for_use();
 
         c1_s = input_db->getDouble("C1_S");
@@ -615,8 +615,8 @@ main(int argc, char* argv[])
             time_integrator->registerVisItDataWriter(visit_data_writer);
         }
 
-        libMesh::UniquePtr<ExodusII_IO> exodus_io(uses_exodus ? new ExodusII_IO(mesh) : NULL);
-        libMesh::UniquePtr<ExodusII_IO> exodus_bndry_io(uses_exodus ? new ExodusII_IO(boundary_mesh) : NULL);
+        std::unique_ptr<ExodusII_IO> exodus_io(uses_exodus ? new ExodusII_IO(mesh) : NULL);
+        std::unique_ptr<ExodusII_IO> exodus_bndry_io(uses_exodus ? new ExodusII_IO(boundary_mesh) : NULL);
 
         ibfe_bndry_ops->initializeFEData();
         time_integrator->initializePatchHierarchy(patch_hierarchy, gridding_algorithm);
@@ -787,11 +787,11 @@ main(int argc, char* argv[])
             const vector<vector<VectorValue<double> > >& dphi = fe->get_dphi();
             TensorValue<double> FF;
             boost::multi_array<double, 2> X_node;
-            const MeshBase::const_element_iterator el_begin = mesh.active_local_elements_begin();
-            const MeshBase::const_element_iterator el_end = mesh.active_local_elements_end();
-            for (MeshBase::const_element_iterator el_it = el_begin; el_it != el_end; ++el_it)
+            const auto el_begin = mesh.active_local_elements_begin();
+            const auto el_end = mesh.active_local_elements_end();
+            for (auto el_it = el_begin; el_it != el_end; ++el_it)
             {
-                Elem* const elem = *el_it;
+                const Elem* elem = *el_it;
                 fe->reinit(elem);
                 for (unsigned int d = 0; d < NDIM; ++d)
                 {
@@ -865,9 +865,9 @@ postprocess_Convergence(Pointer<PatchHierarchy<NDIM> > /*patch_hierarchy*/,
     const DofMap& dof_map = x_system.get_dof_map();
     std::vector<std::vector<unsigned int> > dof_indices(NDIM);
 
-    UniquePtr<FEBase> fe(FEBase::build(dim, dof_map.variable_type(0)));
+    std::unique_ptr<FEBase> fe(FEBase::build(dim, dof_map.variable_type(0)));
 
-    UniquePtr<QBase> qrule = QBase::build(QGAUSS, dim, SEVENTH);
+    std::unique_ptr<QBase> qrule = QBase::build(QGAUSS, dim, SEVENTH);
     fe->attach_quadrature_rule(qrule.get());
     const vector<vector<double> >& phi = fe->get_phi();
 
@@ -880,8 +880,8 @@ postprocess_Convergence(Pointer<PatchHierarchy<NDIM> > /*patch_hierarchy*/,
     boost::multi_array<double, 2> x_node, U_node, TAU_node, X_node;
     VectorValue<double> F_qp, U_qp, x_qp, X_qp, W_qp, TAU_qp, N, n, X;
 
-    const MeshBase::const_element_iterator el_begin = mesh.active_local_elements_begin();
-    const MeshBase::const_element_iterator el_end = mesh.active_local_elements_end();
+    const auto el_begin = mesh.active_local_elements_begin();
+    const auto el_end = mesh.active_local_elements_end();
 
     DofMap& U_dof_map = U_system.get_dof_map();
     std::vector<std::vector<unsigned int> > U_dof_indices(NDIM);
@@ -889,9 +889,9 @@ postprocess_Convergence(Pointer<PatchHierarchy<NDIM> > /*patch_hierarchy*/,
     VectorValue<double> tau1, tau2;
     double Lmax_diff = 0.0;
 
-    for (MeshBase::const_element_iterator el_it = el_begin; el_it != el_end; ++el_it)
+    for (auto el_it = el_begin; el_it != el_end; ++el_it)
     {
-        Elem* const elem = *el_it;
+        const Elem* elem = *el_it;
         fe->reinit(elem);
         const int n_qp = qrule->n_points();
         for (unsigned int d = 0; d < NDIM; ++d)

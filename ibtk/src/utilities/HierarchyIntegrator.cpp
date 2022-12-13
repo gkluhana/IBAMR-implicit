@@ -1010,8 +1010,8 @@ bool
 HierarchyIntegrator::isAllocatedPatchData(const int data_idx, int coarsest_ln, int finest_ln) const
 {
     if (data_idx < 0) return false;
-    if (coarsest_ln == -1) coarsest_ln = 0;
-    if (finest_ln == -1) finest_ln = d_hierarchy->getFinestLevelNumber();
+    if (coarsest_ln == invalid_level_number) coarsest_ln = 0;
+    if (finest_ln == invalid_level_number) finest_ln = d_hierarchy->getFinestLevelNumber();
     for (int ln = coarsest_ln; ln <= finest_ln; ++ln)
     {
         Pointer<PatchLevel<NDIM> > level = d_hierarchy->getPatchLevel(ln);
@@ -1024,8 +1024,8 @@ void
 HierarchyIntegrator::allocatePatchData(const int data_idx, const double data_time, int coarsest_ln, int finest_ln) const
 {
     if (data_idx < 0) return;
-    if (coarsest_ln == -1) coarsest_ln = 0;
-    if (finest_ln == -1) finest_ln = d_hierarchy->getFinestLevelNumber();
+    if (coarsest_ln == invalid_level_number) coarsest_ln = 0;
+    if (finest_ln == invalid_level_number) finest_ln = d_hierarchy->getFinestLevelNumber();
     for (int ln = coarsest_ln; ln <= finest_ln; ++ln)
     {
         Pointer<PatchLevel<NDIM> > level = d_hierarchy->getPatchLevel(ln);
@@ -1038,8 +1038,8 @@ void
 HierarchyIntegrator::deallocatePatchData(const int data_idx, int coarsest_ln, int finest_ln) const
 {
     if (data_idx < 0) return;
-    if (coarsest_ln == -1) coarsest_ln = 0;
-    if (finest_ln == -1) finest_ln = d_hierarchy->getFinestLevelNumber();
+    if (coarsest_ln == invalid_level_number) coarsest_ln = 0;
+    if (finest_ln == invalid_level_number) finest_ln = d_hierarchy->getFinestLevelNumber();
     for (int ln = coarsest_ln; ln <= finest_ln; ++ln)
     {
         Pointer<PatchLevel<NDIM> > level = d_hierarchy->getPatchLevel(ln);
@@ -1073,9 +1073,9 @@ HierarchyIntegrator::registerVariable(int& current_idx,
 
     VariableDatabase<NDIM>* var_db = VariableDatabase<NDIM>::getDatabase();
 
-    current_idx = -1; // insure that uninitialized variable patch data
-    new_idx = -1;     // descriptor indices cause errors
-    scratch_idx = -1;
+    current_idx = invalid_index; // insure that uninitialized variable patch data
+    new_idx = invalid_index;     // descriptor indices cause errors
+    scratch_idx = invalid_index;
 
     d_state_variables.push_back(variable);
 
