@@ -224,6 +224,56 @@ PETScLevelSolver::solveSystem(SAMRAIVectorReal<NDIM, double>& x, SAMRAIVectorRea
     IBTK_CHKERRQ(ierr);
     copyFromPETScVec(d_petsc_x, x);
 
+    
+    /*
+    //Check KSP Settings
+    PC pc;
+    ierr = KSPGetPC(d_petsc_ksp,&pc);
+
+    PCType PC_type;
+    ierr = PCGetType(pc, &PC_type);
+    pout << "\n PC Type is " << PC_type <<  "\n";
+
+
+    PCFieldSplitSchurPreType PCfieldsplitschurpretype;
+    Mat SchurPre;
+    ierr = PCFieldSplitGetSchurPre(pc, &PCfieldsplitschurpretype, &SchurPre); //SchurPre is user provided approx for schur
+    pout << "\n PC FieldSplit Schur Preconditioner Type is " << PCfieldsplitschurpretype <<  "\n";
+
+    
+    // Check if correct system is being solved
+    Mat A;
+    Mat P;
+    ierr = KSPGetOperators(d_petsc_ksp,&A,&P);
+    pout << "\n Printing Matrices in PetscLevelSolver " <<  "\n";
+    PetscViewer matlab_viewer;
+
+    std::ostringstream A_filename;
+    A_filename << "A_levelSolver" ;
+    PetscViewerBinaryOpen(PETSC_COMM_WORLD, A_filename.str().c_str(), FILE_MODE_WRITE, &matlab_viewer);
+    PetscViewerPushFormat(matlab_viewer, PETSC_VIEWER_BINARY_MATLAB);
+    MatView(A, matlab_viewer);
+    pout << "\n Printed A Matrix in PETSCLevelSolver::solveSystem \n";
+
+    std::ostringstream P_filename;
+    P_filename << "P_levelSolver" ;
+    PetscViewerBinaryOpen(PETSC_COMM_WORLD, P_filename.str().c_str(), FILE_MODE_WRITE, &matlab_viewer);
+    PetscViewerPushFormat(matlab_viewer, PETSC_VIEWER_BINARY_MATLAB);
+    MatView(P, matlab_viewer);
+    pout << "\n Printed P Matrix in PETSCLevelSolver::solveSystem \n";
+
+    // Null for selfp
+    std::ostringstream SchurPre_filename;
+    SchurPre_filename << "SchurPre_levelSolver" ;
+    PetscViewerBinaryOpen(PETSC_COMM_WORLD, SchurPre_filename.str().c_str(), FILE_MODE_WRITE, &matlab_viewer);
+    PetscViewerPushFormat(matlab_viewer, PETSC_VIEWER_BINARY_MATLAB);
+    MatView(SchurPre, matlab_viewer);
+    pout << "\n Printed SchurPre Matrix in PETSCLevelSolver::solveSystem \n";
+    
+    PetscViewerPopFormat(matlab_viewer);
+    PetscViewerDestroy(&matlab_viewer);
+    */
+
     // Log solver info.
     KSPConvergedReason reason;
     ierr = KSPGetConvergedReason(d_petsc_ksp, &reason);
@@ -344,8 +394,17 @@ PETScLevelSolver::initializeSolverState(const SAMRAIVectorReal<NDIM, double>& x,
     ierr = KSPGetPC(d_petsc_ksp, &ksp_pc);
     IBTK_CHKERRQ(ierr);
     PCType pc_type = d_pc_type.c_str();
+
+    //SET PC TYPE FROM INPUT DB
     ierr = PCSetType(ksp_pc, pc_type);
     IBTK_CHKERRQ(ierr);
+
+    //GET PC TYPE
+    ierr = PCGetType(ksp_pc, &pc_type);
+    IBTK_CHKERRQ(ierr);
+    pout << "PC_TYPE " << pc_type << std::endl;
+    pout << "SHELL_PC_TYPE " << d_shell_pc_type << std::endl;
+
     if (d_options_prefix != "")
     {
         ierr = KSPSetOptionsPrefix(d_petsc_ksp, d_options_prefix.c_str());
@@ -360,7 +419,12 @@ PETScLevelSolver::initializeSolverState(const SAMRAIVectorReal<NDIM, double>& x,
     ierr = PCGetType(ksp_pc, &pc_type);
     IBTK_CHKERRQ(ierr);
     d_pc_type = pc_type;
+    pout << "PC_TYPE " << d_pc_type << std::endl;
+    pout << "SHELL_PC_TYPE " << d_shell_pc_type << std::endl;
 
+
+
+    
     // Set the nullspace.
     if (d_nullspace_contains_constant_vec || !d_nullspace_basis_vecs.empty()) setupNullspace();
 
@@ -397,10 +461,33 @@ PETScLevelSolver::initializeSolverState(const SAMRAIVectorReal<NDIM, double>& x,
 
     if (d_pc_type == "fieldsplit")
     {
+        // Trying to check which Fieldsplit type is being used 
+        //GET FIELDSCPLITSCHURTYPE
+        /*
+        PCFieldSplitSchurPreType pc_fieldsplit_schur_precondition;
+        Mat temp;
+        ierr = PCFieldSplitGetSchurPre(ksp_pc, &pc_fieldsplit_schur_precondition,&temp);
+        IBTK_CHKERRQ(ierr);
+        pout << "PC_FIELDSPLIT_SCHUR_PRE_TYPE " << pc_fieldsplit_schur_precondition << std::endl;
+
+        //Supply user preconditioner if user preconditioner used
+        if(pc_fieldsplit_schur_precondition == 3)
+        {
+        ierr = PCFieldSplitSetSchurPre(ksp_pc, PC_FIELDSPLIT_SCHUR_PRE_USER,temp);
+        IBTK_CHKERRQ(ierr);
+        }
+        //Verify user preconditioner was correctly set
+        ierr = PCFieldSplitGetSchurPre(ksp_pc, &pc_fieldsplit_schur_precondition,&temp);
+        IBTK_CHKERRQ(ierr);
+        pout << "USER_PRE? " << pc_fieldsplit_schur_precondition << std::endl;
+        */
+
+        //Generate Split Subdomains for u and p for fieldsplit preconditioner
         std::vector<std::set<int> > field_is;
         std::vector<std::string> field_name;
         generateFieldSplitSubdomains(field_name, field_is);
         d_field_name = field_name;
+
         const int n_fields = static_cast<int>(field_is.size());
 
         // Destroy old IS'es and generate new ones.
@@ -412,6 +499,7 @@ PETScLevelSolver::initializeSolverState(const SAMRAIVectorReal<NDIM, double>& x,
         d_field_is.clear();
 
         d_field_is.resize(n_fields);
+        //provide split IS information to PC Fieldsplit
         for (int k = 0; k < n_fields; ++k)
         {
             PetscInt* field_dof_arr;
@@ -423,8 +511,14 @@ PETScLevelSolver::initializeSolverState(const SAMRAIVectorReal<NDIM, double>& x,
             IBTK_CHKERRQ(ierr);
             ierr = PCFieldSplitSetIS(ksp_pc, d_field_name[k].c_str(), d_field_is[k]);
             IBTK_CHKERRQ(ierr);
+            
         }
+        /*you can try to set the Schur Pre here... 
+        ierr = PCFieldSplitSetSchurPre(ksp_pc, PC_FIELDSPLIT_SCHUR_PRE_A11 ,NULL);
+        IBTK_CHKERRQ(ierr);     
+        */
     }
+   
 
     if (d_pc_type == "shell")
     {
@@ -437,14 +531,16 @@ PETScLevelSolver::initializeSolverState(const SAMRAIVectorReal<NDIM, double>& x,
         // Generate user-defined subdomains.
         std::vector<std::set<int> > overlap_is, nonoverlap_is;
         generateASMSubdomains(overlap_is, nonoverlap_is);
-        d_n_local_subdomains = static_cast<int>(d_overlap_is.size());
-        d_n_subdomains_max = IBTK_MPI::maxReduction(d_n_local_subdomains);
+        
 
         // Generate PETSc IS in cases where they have not been generated directly.
         if (!d_overlap_is.size())
         {
             generate_petsc_is_from_std_is(overlap_is, nonoverlap_is, d_overlap_is, d_nonoverlap_is);
         }
+
+        d_n_local_subdomains = static_cast<int>(d_overlap_is.size());
+        d_n_subdomains_max = IBTK_MPI::maxReduction(d_n_local_subdomains);
 
         // Get the local submatrices.
 #if PETSC_VERSION_GE(3, 8, 0)
@@ -571,13 +667,24 @@ PETScLevelSolver::initializeSolverState(const SAMRAIVectorReal<NDIM, double>& x,
             ierr = ISDestroy(&local_idx);
             IBTK_CHKERRQ(ierr);
         }
-
+	MatType mat_type;
         // Set up subdomain KSPs
         d_sub_ksp.resize(d_n_local_subdomains);
         for (int i = 0; i < d_n_local_subdomains; ++i)
         {
             KSP& sub_ksp = d_sub_ksp[i];
-            Mat& sub_mat = d_sub_mat[i];
+	   
+	    ierr = MatGetType(d_sub_mat[i],&mat_type);
+            IBTK_CHKERRQ(ierr);
+	    std::cout << mat_type << " Mat Type i =" << i << std::endl;
+	    if ((std::string)mat_type != MATSEQDENSE){
+	    ierr = MatConvert(d_sub_mat[i], MATSEQDENSE,  MAT_INPLACE_MATRIX,&d_sub_mat[i]); 
+            IBTK_CHKERRQ(ierr);
+	    ierr = MatGetType(d_sub_mat[i],&mat_type);
+            IBTK_CHKERRQ(ierr);
+	    std::cout << mat_type << " Mat Converted i =" << i << std::endl;
+	    }
+	    Mat& sub_mat = d_sub_mat[i];
             ierr = KSPCreate(PETSC_COMM_SELF, &sub_ksp);
             IBTK_CHKERRQ(ierr);
             std::string sub_prefix = d_options_prefix + "_sub";
@@ -613,7 +720,7 @@ PETScLevelSolver::initializeSolverState(const SAMRAIVectorReal<NDIM, double>& x,
         IBTK_CHKERRQ(ierr);
         if (d_shell_pc_type == "additive")
         {
-            ierr = PCShellSetApply(ksp_pc, PETScLevelSolver::PCApply_Additive);
+            ierr = PCShellSetApply(ksp_pc, PETScLevelSolver::PCApply_AdditiveBatched );
             IBTK_CHKERRQ(ierr);
             std::string pc_name = d_options_prefix + "PC_Additive";
             ierr = PCShellSetName(ksp_pc, pc_name.c_str());
@@ -753,6 +860,8 @@ PETScLevelSolver::init(Pointer<Database> input_db, const std::string& default_op
             input_db->getIntegerArray("subdomain_box_size", d_box_size, NDIM);
         if (input_db->keyExists("subdomain_overlap_size"))
             input_db->getIntegerArray("subdomain_overlap_size", d_overlap_size, NDIM);
+        if (input_db->keyExists("pc_fieldsplit_type")) d_pc_fieldsplit_type = input_db->getString("pc_fieldsplit_type");
+        if (input_db->keyExists("pc_fieldsplit_schur_precondition")) d_pc_fieldsplit_schur_precondition = input_db->getString("pc_fieldsplit_schur_precondition");
     }
     return;
 } // init
@@ -814,7 +923,6 @@ PETScLevelSolver::setupNullspace()
 PetscErrorCode
 PETScLevelSolver::PCApply_Additive(PC pc, Vec x, Vec y)
 {
-    PetscFunctionBeginUser;
     int ierr;
     void* ctx;
     ierr = PCShellGetContext(pc, &ctx);
@@ -859,9 +967,97 @@ PETScLevelSolver::PCApply_Additive(PC pc, Vec x, Vec y)
 } // PCApply_Additive
 
 PetscErrorCode
+PETScLevelSolver::PCApply_AdditiveBatched(PC pc, Vec x, Vec y)
+{
+    int ierr;
+    void* ctx;
+    ierr = PCShellGetContext(pc, &ctx);
+    CHKERRQ(ierr);
+    auto solver = static_cast<PETScLevelSolver*>(ctx);
+#if !defined(NDEBUG)
+    TBOX_ASSERT(solver);
+#endif
+    const int n_local_subdomains = solver->d_n_local_subdomains;
+    const int n_subdomains_max = solver->d_n_subdomains_max;
+    std::vector<VecScatter>& restriction = solver->d_restriction;
+    std::vector<VecScatter>& prolongation = solver->d_prolongation;
+    std::vector<KSP>& sub_ksp = solver->d_sub_ksp;
+    std::vector<Vec>& sub_x = solver->d_sub_x;
+    std::vector<Vec>& sub_y = solver->d_sub_y;
+   
+    //Vector of Mat for extracting subdomain operators 
+    std::vector<Mat> sub_mat(n_subdomains_max);
+    
+    for (int i = 0; i < n_subdomains_max; ++i)
+    {
+        //Get Operators from all sub KSPs and extract data arrays 
+  	ierr = KSPGetOperators(sub_ksp[i], &sub_mat[i], NULL);
+	CHKERRQ(ierr);
+	
+	//Extract data array
+	int m;
+	int n;
+	ierr = MatGetLocalSize(sub_mat[i], &m, &n);
+	CHKERRQ(ierr);
+	double **arr;
+	arr = new double *[m*n];
+	ierr = MatDenseGetArray(sub_mat[i], arr);
+	CHKERRQ(ierr);
+	std::cout << "Loaded array of size "<< m << " x " << n << std::endl;
+    	
+	// Restrict the global vector to the local vectors, solve the local systems, and
+    	// prolong the data back into the global vector.
+        ierr = VecScatterBegin(restriction[i], x, sub_x[i], INSERT_VALUES, SCATTER_FORWARD);
+        CHKERRQ(ierr);
+        ierr = VecScatterEnd(restriction[i], x, sub_x[i], INSERT_VALUES, SCATTER_FORWARD);
+        CHKERRQ(ierr);        
+ 	
+	//Get the local vectors
+	double **vec;
+	vec = new double *[n];
+	ierr= VecGetArray(sub_x[i], vec);
+	std::cout << "Loaded vector of size "<< m << " x " << n << std::endl;
+   }
+   //Combine the arrays and vectors for magma to communicate to GPU
+   //Set the arrays and vectors on GPU
+   //Solve the systems on GPU in batch
+   //Communicate the arrays and vectors back to CPU
+   //Communicate the arrays and vectors back to Petsc
+   //
+    double *dA;
+    double **dA_array = NULL;
+    
+    
+    //magma_int_t lda,ldda, n2;
+    //magma_int_t batchCount = d_n_subdomains_max;
+    //n2 = lda*N*batchCount; //lda is m, N is n 
+    //ldda = magma_roundup(m, 32);
+    //magma_dmallow(&dA, ldda*N*batchCount);
+    //magma_malloc( (void**) &dA_array, batchCount*sizeof(double*));
+    //magma_dsetmatrix(rows,columns, ..);
+    //magma
+    for (int i = 0; i < n_subdomains_max; ++i)
+    {
+        if (i < n_local_subdomains)
+        {
+            ierr = KSPSolve(sub_ksp[i], sub_x[i], sub_y[i]);
+            CHKERRQ(ierr);
+        }
+
+    }
+    for (int i = 0; i < n_subdomains_max; ++i)
+    {
+        ierr = VecScatterBegin(prolongation[i], sub_y[i], y, INSERT_VALUES, SCATTER_FORWARD_LOCAL);
+        CHKERRQ(ierr);
+        ierr = VecScatterEnd(prolongation[i], sub_y[i], y, INSERT_VALUES, SCATTER_FORWARD_LOCAL);
+        CHKERRQ(ierr);
+    }
+    PetscFunctionReturn(0);
+} // PCApply_AdditiveBatched
+
+PetscErrorCode
 PETScLevelSolver::PCApply_Multiplicative(PC pc, Vec x, Vec y)
 {
-    PetscFunctionBeginUser;
     int ierr;
     void* ctx;
     ierr = PCShellGetContext(pc, &ctx);
